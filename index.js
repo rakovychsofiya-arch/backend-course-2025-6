@@ -4,6 +4,7 @@ const app = express(); // Створюємо програму
 const fs = require('node:fs').promises;
 const path = require('node:path');
 const fsSync = require('node:fs');
+const multer = require('multer');
 const superagent = require('superagent');
 program
     .requiredOption('-h,--host <string>', 'Input IP adress of server')
@@ -153,7 +154,87 @@ app.get('/inventory/:id/photo', (req, res) => {
 
     const photoPath = path.join(cachePath, item.photo);
     // res.sendFile автоматично встановлює правильний Content-Type
+    res.setHeader('Content-Type', 'image/jpeg');
     res.sendFile(photoPath);
+});
+// PUT /inventory/:id/photo - Оновлення фото
+app.put('/inventory/:id/photo', upload.single('photo'), (req, res) => {
+    const item = inventory.find(i => i.id === req.params.id);
+
+    if (!item) {
+        return res.status(404).send('Not found');
+    }
+
+    if (!req.file) {
+        return res.status(400).send('No file uploaded');
+    }
+
+    // Оновлюємо посилання на нове фото
+    item.photo = req.file.filename;
+
+    res.send('Photo updated');
+});
+// DELETE /inventory/:id - Видалення речі
+app.delete('/inventory/:id', (req, res) => {
+    const index = inventory.findIndex(i => i.id === req.params.id);
+
+    if (index === -1) {
+        return res.status(404).send('Not found');
+    }
+
+    // Видаляємо 1 елемент починаючи зі знайденого індексу
+    inventory.splice(index, 1);
+    res.send('Deleted');
+});
+app.get('/RegisterForm.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'RegisterForm.html'));
+});
+
+app.get('/SearchForm.html', (req, res) => {
+    res.sendFile(path.join(__dirname, 'SearchForm.html'));
+});
+// POST /search - Пошук пристрою
+app.post('/search', (req, res) => {
+    const { id, has_photo } = req.body; // Отримуємо дані з форми
+
+    const item = inventory.find(i => i.id === id);
+
+    if (!item) {
+        return res.status(404).send('Not Found');
+    }
+
+    // Створюємо копію об'єкта, щоб не змінювати оригінал в базі
+    let responseItem = { ...item };
+
+    // Логіка з прапорцем has_photo (згідно завдання)
+    if (has_photo === 'on' || has_photo === 'true') {
+        responseItem.description += ` Photo link: /inventory/${item.id}/photo`;
+    }
+
+    res.json(responseItem);
+});
+// --- ОБРОБКА ПОМИЛОК 405 (Method Not Allowed) ---
+
+// Для /register дозволено тільки POST, решта - 405
+app.all('/register', (req, res) => {
+    res.status(405).send('Method Not Allowed');
+});
+
+// Для /inventory дозволено GET, решта - 405
+// (Увага: це перехопить тільки точний URL /inventory)
+app.all('/inventory', (req, res) => {
+    res.status(405).send('Method Not Allowed');
+});
+
+// Для /search дозволено POST, решта - 405
+app.all('/search', (req, res) => {
+    res.status(405).send('Method Not Allowed');
+});
+
+// Для конкретних речей /inventory/:id ми маємо GET, PUT, DELETE.
+// Якщо прийшов POST чи PATCH - повертаємо 405.
+app.all('/inventory/:id', (req, res) => {
+    res.status(405).send('Method Not Allowed');
 });
 // Головна сторінка (для тесту)
 app.get('/', (req, res) => {
