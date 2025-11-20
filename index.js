@@ -7,6 +7,8 @@ const fsSync = require('node:fs');
 const multer = require('multer');
 const http = require('http');
 const superagent = require('superagent');
+const swaggerUi = require('swagger-ui-express');
+const YAML = require('yamljs');
 program
     .requiredOption('-h,--host <string>', 'Input IP adress of server')
     .requiredOption('-p,--port <number>', 'Input Port')
@@ -70,6 +72,14 @@ const upload = multer({ storage: storage });
 app.use(express.json()); // Щоб сервер розумів JSON
 app.use(express.urlencoded({ extended: true })); // Щоб сервер розумів дані з форм
 
+
+try {
+    const swaggerDocument = YAML.load('./swagger.yaml');
+    app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+    console.log('Swagger docs available at /docs');
+} catch (e) {
+    console.log("Swagger file not found, skipping docs...");
+}
 // --- 5. МАРШРУТИ (ENDPOINTS) ---
 // GET /inventory - Отримання списку всіх речей
 app.get('/inventory', (req, res) => {
@@ -221,11 +231,12 @@ app.get('/search', (req, res) => {
 
     res.json(responseItem);
 });
+// Обробка помилок 405
+const send405 = (req, res) => res.status(405).send('Method Not Allowed');
+app.all('/register', send405);
+app.all('/inventory', send405);
+app.all('/inventory/:id', send405);
 
-// Головна сторінка (для тесту)
-app.get('/', (req, res) => {
-    res.send('Inventory Service is Running. Use Postman to test /register and /inventory');
-});
 
 // Створюємо сервер через модуль http, передаючи йому Express (app) як обробник
 const server = http.createServer(app);
