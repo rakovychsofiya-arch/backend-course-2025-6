@@ -9,6 +9,8 @@ const http = require('http');
 const superagent = require('superagent');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
+const cors = require('cors');
+app.use(cors()); // <--- Це дозволяє всім (в т.ч. Swagger) звертатися до сервера.
 program
     .requiredOption('-h,--host <string>', 'Input IP adress of server')
     .requiredOption('-p,--port <number>', 'Input Port')
@@ -225,6 +227,27 @@ app.get('/search', (req, res) => {
     let responseItem = { ...item };
 
     // Перевіряємо галочку
+    if (has_photo === 'on' || has_photo === 'true') {
+        responseItem.description += ` Photo link: /inventory/${item.id}/photo`;
+    }
+
+    res.json(responseItem);
+});
+// --- ДОДАЄМО POST ДЛЯ SWAGGER ТА POSTMAN ---
+app.post('/search', (req, res) => {
+    // При POST дані приходять у тілі запиту (req.body)
+    const { id, has_photo } = req.body;
+
+    console.log(`POST Search for ID: ${id}, has_photo: ${has_photo}`);
+
+    const item = inventory.find(i => i.id === id);
+
+    if (!item) {
+        return res.status(404).send('Not Found');
+    }
+
+    let responseItem = { ...item };
+
     if (has_photo === 'on' || has_photo === 'true') {
         responseItem.description += ` Photo link: /inventory/${item.id}/photo`;
     }
