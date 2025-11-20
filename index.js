@@ -1,11 +1,7 @@
 const { program } = require('commander');
 const express = require('express'); // Підключаємо Express
 const app = express(); // Створюємо програму
-const fs = require('node:fs').promises;
-const path = require('node:path');
-const fsSync = require('node:fs');
 const multer = require('multer');
-const superagent = require('superagent');
 program
     .requiredOption('-h,--host <string>', 'Input IP adress of server')
     .requiredOption('-p,--port <number>', 'Input Port')
@@ -64,7 +60,6 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage: storage });
 
-// --- 4. НАЛАШТУВАННЯ EXPRESS ---
 
 app.use(express.json()); // Щоб сервер розумів JSON
 app.use(express.urlencoded({ extended: true })); // Щоб сервер розумів дані з форм
