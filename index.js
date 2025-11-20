@@ -108,6 +108,23 @@ app.post('/register', upload.single('photo'), (req, res) => {
     // Повертаємо статус 201 Created [cite: 80]
     res.status(201).send('Created');
 });
+// GET /inventory/:id - Отримання інформації про конкретну річ
+app.get('/inventory/:id', (req, res) => {
+    const item = inventory.find(i => i.id === req.params.id);
+
+    if (!item) {
+        return res.status(404).send('Not found');
+    }
+    const responseItem = {
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        // Якщо фото є, формуємо повне посилання: /inventory/<ID>/photo
+        photo: item.photo ? `/inventory/${item.id}/photo` : null
+    };
+
+    res.json(responseItem);
+});
 
 // Головна сторінка (для тесту)
 app.get('/', (req, res) => {
