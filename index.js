@@ -143,6 +143,18 @@ app.put('/inventory/:id', (req, res) => {
 
     res.json(item); // Повертаємо оновлений об'єкт
 });
+// GET /inventory/:id/photo - Отримання фото зображення
+app.get('/inventory/:id/photo', (req, res) => {
+    const item = inventory.find(i => i.id === req.params.id);
+
+    if (!item || !item.photo) {
+        return res.status(404).send('Not found');
+    }
+
+    const photoPath = path.join(cachePath, item.photo);
+    // res.sendFile автоматично встановлює правильний Content-Type
+    res.sendFile(photoPath);
+});
 // Головна сторінка (для тесту)
 app.get('/', (req, res) => {
     res.send('Inventory Service is Running. Use Postman to test /register and /inventory');
