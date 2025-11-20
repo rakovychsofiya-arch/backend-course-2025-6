@@ -1,5 +1,6 @@
 const { program } = require('commander');
-const http = require('node:http');
+const express = require('express'); // Підключаємо Express
+const app = express(); // Створюємо програму
 const fs = require('node:fs').promises;
 const path = require('node:path');
 const fsSync = require('node:fs');
@@ -43,20 +44,53 @@ try {
     console.error(`Помилка при створенні директорії кешу: ${err.message}`);
     process.exit(1);
 }
-const server = http.createServer(async (req, res) => {
-    console.log(`NEW REQUEST: ${req.method} ${req.url}`);
-    const fileId = req.url.slice(1);
 
-    if (!fileId) {
-        res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
-        res.end('Not Found');
-        return;
+// --- 2. НАЛАШТУВАННЯ СХОВИЩА ДАНИХ ---
+// Масив для зберігання інформації про речі (поки сервер працює)
+let inventory = [];
+
+// --- 3. НАЛАШТУВАННЯ MULTER (ЗАВАНТАЖЕННЯ ФОТО) ---
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        // Вказуємо, що файли треба зберігати в папку cachePath
+        cb(null, cachePath);
+    },
+    filename: function (req, file, cb) {
+        // Генеруємо унікальне ім'я файлу (щоб файли з однаковими назвами не перезаписали один одного)
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
     }
+});
+const upload = multer({ storage: storage });
 
-    const filePath = path.join(cachePath, fileId + '.jpeg');
+// --- 4. НАЛАШТУВАННЯ EXPRESS ---
 
+app.use(express.json()); // Щоб сервер розумів JSON
+app.use(express.urlencoded({ extended: true })); // Щоб сервер розумів дані з форм
+
+// --- 5. МАРШРУТИ (ENDPOINTS) ---
+// GET /inventory - Отримання списку всіх речей
+app.get('/inventory', (req, res) => {
+    // Створюємо новий список, де замість імені файлу буде посилання
+    const responseList = inventory.map(item => {
+        return {
+            id: item.id,
+            name: item.name,
+            description: item.description,
+            // Формуємо посилання: /inventory/<ID>/photo
+            photo: item.photo ? `/inventory/${item.id}/photo` : null
+        };
+    });
+
+    res.json(responseList);
 });
 
-server.listen(options.port, options.host, () => {
+// Головна сторінка (для тесту)
+app.get('/', (req, res) => {
+    res.send('Inventory Service is Running. Use Postman to test /register and /inventory');
+});
+
+// Запуск сервера
+app.listen(options.port, options.host, () => {
     console.log(`Server running on http://${options.host}:${options.port}`);
 });
