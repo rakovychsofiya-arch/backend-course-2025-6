@@ -84,6 +84,30 @@ app.get('/inventory', (req, res) => {
 
     res.json(responseList);
 });
+app.post('/register', upload.single('photo'), (req, res) => {
+    // Отримуємо текстові дані з форми
+    const { inventory_name, description } = req.body;
+
+    // Перевірка: Ім'я обов'язкове 
+    if (!inventory_name) {
+        return res.status(400).send('Bad Request: inventory_name is required');
+    }
+
+    // Створюємо новий об'єкт
+    const newItem = {
+        id: Date.now().toString(), // Генеруємо ID
+        name: inventory_name,
+        description: description || '',
+        // Якщо фото завантажено, зберігаємо його ім'я, інакше null
+        photo: req.file ? req.file.filename : null
+    };
+
+    // Додаємо в масив
+    inventory.push(newItem);
+
+    // Повертаємо статус 201 Created [cite: 80]
+    res.status(201).send('Created');
+});
 
 // Головна сторінка (для тесту)
 app.get('/', (req, res) => {
