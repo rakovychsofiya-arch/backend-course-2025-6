@@ -1,7 +1,12 @@
 const { program } = require('commander');
 const express = require('express'); // Підключаємо Express
 const app = express(); // Створюємо програму
+const fs = require('node:fs').promises;
+const path = require('node:path');
+const fsSync = require('node:fs');
 const multer = require('multer');
+const http = require('http');
+const superagent = require('superagent');
 program
     .requiredOption('-h,--host <string>', 'Input IP adress of server')
     .requiredOption('-p,--port <number>', 'Input Port')
@@ -59,6 +64,7 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage: storage });
+
 
 
 app.use(express.json()); // Щоб сервер розумів JSON
@@ -189,8 +195,16 @@ app.get('/SearchForm.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'SearchForm.html'));
 });
 // POST /search - Пошук пристрою
-app.post('/search', (req, res) => {
-    const { id, has_photo } = req.body; // Отримуємо дані з форми
+// ВИПРАВЛЕНИЙ ПОШУК (GET)
+app.get('/search', (req, res) => {
+    // Читаємо ID з адресного рядка
+    const id = req.query.id;
+
+    // !!! ОСЬ ТУТ ЗМІНА !!!
+    // Ми кажемо: візьми або 'has_photo', або 'includePhoto' (якщо першого немає)
+    const has_photo = req.query.has_photo || req.query.includePhoto;
+
+    console.log(`Searching for ID: ${id}, include photo: ${has_photo}`);
 
     const item = inventory.find(i => i.id === id);
 
@@ -198,45 +212,25 @@ app.post('/search', (req, res) => {
         return res.status(404).send('Not Found');
     }
 
-    // Створюємо копію об'єкта, щоб не змінювати оригінал в базі
     let responseItem = { ...item };
 
-    // Логіка з прапорцем has_photo (згідно завдання)
+    // Перевіряємо галочку
     if (has_photo === 'on' || has_photo === 'true') {
         responseItem.description += ` Photo link: /inventory/${item.id}/photo`;
     }
 
     res.json(responseItem);
 });
-// --- ОБРОБКА ПОМИЛОК 405 (Method Not Allowed) ---
 
-// Для /register дозволено тільки POST, решта - 405
-app.all('/register', (req, res) => {
-    res.status(405).send('Method Not Allowed');
-});
-
-// Для /inventory дозволено GET, решта - 405
-// (Увага: це перехопить тільки точний URL /inventory)
-app.all('/inventory', (req, res) => {
-    res.status(405).send('Method Not Allowed');
-});
-
-// Для /search дозволено POST, решта - 405
-app.all('/search', (req, res) => {
-    res.status(405).send('Method Not Allowed');
-});
-
-// Для конкретних речей /inventory/:id ми маємо GET, PUT, DELETE.
-// Якщо прийшов POST чи PATCH - повертаємо 405.
-app.all('/inventory/:id', (req, res) => {
-    res.status(405).send('Method Not Allowed');
-});
 // Головна сторінка (для тесту)
 app.get('/', (req, res) => {
     res.send('Inventory Service is Running. Use Postman to test /register and /inventory');
 });
 
-// Запуск сервера
-app.listen(options.port, options.host, () => {
+// Створюємо сервер через модуль http, передаючи йому Express (app) як обробник
+const server = http.createServer(app);
+
+// Викликаємо http.Server.listen() з параметрами host та port
+server.listen(options.port, options.host, () => {
     console.log(`Server running on http://${options.host}:${options.port}`);
 });
