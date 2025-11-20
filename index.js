@@ -125,7 +125,24 @@ app.get('/inventory/:id', (req, res) => {
 
     res.json(responseItem);
 });
+// PUT /inventory/:id - Оновлення імені або опису
+app.put('/inventory/:id', (req, res) => {
+    const item = inventory.find(i => i.id === req.params.id);
 
+    if (!item) {
+        return res.status(404).send('Not found');
+    }
+
+    // Оновлюємо поля, якщо вони передані
+    if (req.body.name) {
+        item.name = req.body.name;
+    }
+    if (req.body.description) {
+        item.description = req.body.description;
+    }
+
+    res.json(item); // Повертаємо оновлений об'єкт
+});
 // Головна сторінка (для тесту)
 app.get('/', (req, res) => {
     res.send('Inventory Service is Running. Use Postman to test /register and /inventory');
